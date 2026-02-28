@@ -17,3 +17,5 @@ v1.4
 add dice with sound and animation
 add help page
 add copywrite
+limit to 10 sessions on list view
+add e2e tests
