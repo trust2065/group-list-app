@@ -460,102 +460,101 @@ export default function ResultPage() {
       onDragEnd={handleDragEnd}
     >
       <div className="min-h-screen bg-slate-100 p-4 md:p-8 font-sans flex flex-col">
-        <div className="flex justify-between items-center mb-6">
-          <button
-            onClick={() => navigate('/')}
-            className="flex items-center gap-2 text-slate-600 hover:text-indigo-600 font-medium text-lg bg-white px-5 py-2.5 rounded-full shadow-sm hover:shadow transition-all"
-          >
-            <ArrowLeft size={20} />
-            Back
-          </button>
+        <div className="max-w-5xl w-full mx-auto flex-grow flex flex-col">
+          <div className="flex justify-between items-center mb-6">
+            <button
+              onClick={() => navigate('/')}
+              className="flex items-center gap-2 text-slate-600 hover:text-indigo-600 font-medium text-lg bg-white px-5 py-2.5 rounded-full shadow-sm hover:shadow transition-all"
+            >
+              <ArrowLeft size={20} />
+              Back
+            </button>
 
-          <div className="flex items-center gap-3">
-            {/* Dice Result Display */}
-            {(diceResults || rolling) && (
-              <div className="flex gap-4 items-center mr-2">
-                {diceDisplayValues.map((num, i) => (
-                  <DiceFace key={i} value={num} rolling={rolling} />
-                ))}
+            <div className="flex items-center gap-3">
+              {/* Dice Result Display */}
+              {(diceResults || rolling) && (
+                <div className="flex gap-4 items-center mr-2">
+                  {diceDisplayValues.map((num, i) => (
+                    <DiceFace key={i} value={num} rolling={rolling} />
+                  ))}
+                </div>
+              )}
+
+              <button
+                onClick={rollDice}
+                className={`p-2.5 rounded-full shadow-sm transition-all active:scale-90 ${rolling ? 'bg-slate-100 text-slate-300' : 'bg-white text-indigo-600 hover:shadow-md'}`}
+                title="Roll 2 Dice (1-3, no repeat)"
+              >
+                <Dices size={24} className={rolling ? 'animate-spin' : ''} />
+              </button>
+
+              <div className="flex flex-col items-end gap-0.5 ml-2">
+                <div className="text-slate-500 text-sm">{formatDate(session.createdAt)}</div>
+              </div>
+
+              <button
+                onClick={() => navigate('/help')}
+                className="p-2.5 text-slate-400 hover:text-indigo-600 bg-white hover:bg-indigo-50 rounded-full border border-slate-200 transition-all shadow-sm"
+                title="How to use"
+              >
+                <HelpCircle size={22} />
+              </button>
+            </div>
+          </div>
+
+          <div className="flex-grow flex flex-col gap-5 md:gap-7">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5 md:gap-7 items-stretch">
+              {mainGroups.map((g, i) => renderGroupCard(g, i, false))}
+            </div>
+
+            {benchGroup && (
+              <div className="w-full mt-4">
+                {renderGroupCard(benchGroup, 3, true)}
               </div>
             )}
+          </div>
 
-            <button
-              onClick={rollDice}
-              className={`p-2.5 rounded-full shadow-sm transition-all active:scale-90 ${rolling ? 'bg-slate-100 text-slate-300' : 'bg-white text-indigo-600 hover:shadow-md'}`}
-              title="Roll 2 Dice (1-3, no repeat)"
-            >
-              <Dices size={24} className={rolling ? 'animate-spin' : ''} />
-            </button>
-
-            <div className="flex flex-col items-end gap-0.5 ml-2">
-              <div className="text-slate-500 text-sm">{formatDate(session.createdAt)}</div>
-            </div>
-
-            <button
-              onClick={() => navigate('/help')}
-              className="p-2.5 text-slate-400 hover:text-indigo-600 bg-white hover:bg-indigo-50 rounded-full border border-slate-200 transition-all shadow-sm"
-              title="How to use"
-            >
-              <HelpCircle size={22} />
-            </button>
+          <div className="mt-8 mb-4 text-center">
+            <p className="text-xs text-slate-400">© Choco Li 2026</p>
           </div>
         </div>
 
-        <div className="flex-grow flex flex-col gap-5 md:gap-7">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 md:gap-7 items-stretch">
-            {mainGroups.map((g, i) => renderGroupCard(g, i, false))}
-          </div>
+        <DragOverlay dropAnimation={null}>
+          {activeMember ? (
+            <DragCard member={activeMember} theme={activeTheme} isShort={activeIsShort} />
+          ) : null}
+        </DragOverlay>
 
-          {benchGroup && (
-            <div className="w-full mt-4">
-              {renderGroupCard(benchGroup, 3, true)}
-            </div>
-          )}
-        </div>
-
-        <div className="mt-8 mb-4 text-center">
-          <p className="text-xs text-slate-400">© Choco Li 2026</p>
-        </div>
-      </div>
-
-      <DragOverlay dropAnimation={null}>
-        {activeMember ? (
-          <DragCard member={activeMember} theme={activeTheme} isShort={activeIsShort} />
-        ) : null}
-      </DragOverlay>
-
-      {/* Dice Bowl Overlay */}
-      <div
-        className={`fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm transition-all duration-300 pointer-events-none ${bowlVisible ? 'opacity-100' : 'opacity-0'}`}
-        style={{ visibility: bowlVisible || rolling ? 'visible' : 'hidden' }}
-      >
+        {/* Dice Bowl Overlay */}
         <div
-          className="w-72 h-72 sm:w-96 sm:h-96 rounded-full shadow-[inset_0_-20px_50px_rgba(0,0,0,0.4),0_20px_50px_rgba(0,0,0,0.5)] border-[12px] border-[#8b5a2b] bg-[#2d6a4f] relative overflow-hidden flex items-center justify-center transition-transform duration-500"
-          style={{ transform: bowlVisible ? 'scale(1)' : 'scale(0.8)' }}
+          className={`fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm transition-all duration-300 pointer-events-none ${bowlVisible ? 'opacity-100' : 'opacity-0'}`}
+          style={{ visibility: bowlVisible || rolling ? 'visible' : 'hidden' }}
         >
-          {/* Inner shadow/gradient for depth */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent pointer-events-none rounded-full" />
-
-          {diceDisplayValues.map((num, i) => {
-            // Randomly fly around while rolling!
-            const tx = rolling ? (Math.random() - 0.5) * 150 : (i === 0 ? -40 : 40);
-            const ty = rolling ? (Math.random() - 0.5) * 150 : (i === 0 ? 10 : -10);
-            const rot = rolling ? Math.random() * 720 : (i === 0 ? -15 : 20);
-            return (
-              <div
-                key={i}
-                className="absolute ease-linear pointer-events-auto shadow-2xl"
-                style={{
-                  transform: `translate(${tx}px, ${ty}px) rotate(${rot}deg) scale(1.6)`,
-                  transitionDuration: rolling ? '80ms' : '500ms',
-                  transitionTimingFunction: rolling ? 'linear' : 'cubic-bezier(0.34, 1.56, 0.64, 1)',
-                  transitionProperty: 'transform'
-                }}
-              >
-                <DiceFace value={num} rolling={false} />
-              </div>
-            );
-          })}
+          <div
+            className="w-72 h-72 sm:w-96 sm:h-96 rounded-full shadow-[inset_0_-20px_50px_rgba(0,0,0,0.4),0_20px_50px_rgba(0,0,0,0.5)] border-[12px] border-[#8b5a2b] bg-[#2d6a4f] relative overflow-hidden flex items-center justify-center transition-transform duration-500"
+            style={{ transform: bowlVisible ? 'scale(1)' : 'scale(0.8)' }}
+          >
+            <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent pointer-events-none rounded-full" />
+            {diceDisplayValues.map((num, i) => {
+              const tx = rolling ? (Math.random() - 0.5) * 150 : (i === 0 ? -40 : 40);
+              const ty = rolling ? (Math.random() - 0.5) * 150 : (i === 0 ? 10 : -10);
+              const rot = rolling ? Math.random() * 720 : (i === 0 ? -15 : 20);
+              return (
+                <div
+                  key={i}
+                  className="absolute ease-linear pointer-events-auto shadow-2xl"
+                  style={{
+                    transform: `translate(${tx}px, ${ty}px) rotate(${rot}deg) scale(1.6)`,
+                    transitionDuration: rolling ? '80ms' : '500ms',
+                    transitionTimingFunction: rolling ? 'linear' : 'cubic-bezier(0.34, 1.56, 0.64, 1)',
+                    transitionProperty: 'transform'
+                  }}
+                >
+                  <DiceFace value={num} rolling={false} />
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
     </DndContext>

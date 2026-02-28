@@ -104,7 +104,7 @@ export default function HelpPage() {
         </div>
 
         <footer className="mt-12 text-center text-slate-400 text-xs">
-          © Choco Li 2026 • v1.2.0
+          © Choco Li 2026 • v1.4.0
         </footer>
       </div>
     </div>

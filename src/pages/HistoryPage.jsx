@@ -55,7 +55,7 @@ export default function HistoryPage() {
 
   return (
     <div className="min-h-screen bg-slate-50 p-4 md:p-8 font-sans">
-      <div className="max-w-2xl mx-auto">
+      <div className="max-w-5xl mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-3 text-slate-800">
