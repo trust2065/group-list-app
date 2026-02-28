@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { collection, getDocs, orderBy, query, updateDoc, doc } from 'firebase/firestore';
+import { collection, getDocs, orderBy, query, updateDoc, doc, limit } from 'firebase/firestore';
 import { db } from '../firebase.js';
 import { ClipboardList, Plus, Trash2, ChevronRight, Users, HelpCircle } from 'lucide-react';
 import Footer from '../components/Footer.jsx';
@@ -13,7 +13,7 @@ export default function HistoryPage() {
 
   useEffect(() => {
     const fetchSessions = async () => {
-      const q = query(collection(db, 'sessions'), orderBy('createdAt', 'desc'));
+      const q = query(collection(db, 'sessions'), orderBy('createdAt', 'desc'), limit(10));
       const snapshot = await getDocs(q);
       setSessions(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
       setLoading(false);
