@@ -11,6 +11,7 @@ import {
   PlusCircle,
   Move
 } from 'lucide-react';
+import Footer from '../components/Footer.jsx';
 
 export default function HelpPage() {
   const navigate = useNavigate();
@@ -29,7 +30,7 @@ export default function HelpPage() {
     {
       icon: <CheckCircle2 className="text-emerald-500" size={24} />,
       title: 'Live Tracking',
-      description: 'Mark members as "present" or "confirmed" with a single tap. Progress is synced in real-time.'
+      description: 'Mark members as "paid" with a single tap. Progress is synced in real-time.'
     },
     {
       icon: <Dices className="text-rose-500" size={24} />,
@@ -49,8 +50,8 @@ export default function HelpPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-slate-50 p-4 md:p-8 font-sans">
-      <div className="max-w-3xl mx-auto">
+    <div className="min-h-[100vh] flex flex-col bg-slate-50 p-4 md:p-8 font-sans">
+      <div className="max-w-3xl w-full mx-auto flex-grow flex flex-col">
         <button
           onClick={() => navigate(-1)}
           className="flex items-center gap-2 text-slate-600 hover:text-indigo-600 font-medium mb-8 bg-white px-4 py-2 rounded-xl shadow-sm transition-all"
@@ -103,9 +104,7 @@ export default function HelpPage() {
           </ul>
         </div>
 
-        <footer className="mt-12 text-center text-slate-400 text-xs">
-          © Choco Li 2026 • v1.4.0
-        </footer>
+        <Footer className="mt-12 bg-transparent" />
       </div>
     </div>
   );

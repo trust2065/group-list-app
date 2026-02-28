@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { collection, getDocs, orderBy, query, updateDoc, doc } from 'firebase/firestore';
 import { db } from '../firebase.js';
 import { ClipboardList, Plus, Trash2, ChevronRight, Users, HelpCircle } from 'lucide-react';
+import Footer from '../components/Footer.jsx';
 
 export default function HistoryPage() {
   const [sessions, setSessions] = useState([]);
@@ -54,13 +55,13 @@ export default function HistoryPage() {
   const groupColors = ['bg-emerald-500', 'bg-blue-500', 'bg-rose-500'];
 
   return (
-    <div className="min-h-screen bg-slate-50 p-4 md:p-8 font-sans">
-      <div className="max-w-5xl mx-auto">
+    <div className="min-h-[100vh] flex flex-col bg-slate-50 p-4 md:p-8 font-sans">
+      <div className="max-w-5xl w-full mx-auto flex-grow flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-3 text-slate-800">
             <ClipboardList size={32} className="text-indigo-600" />
-            <h1 className="text-2xl font-bold">Team History</h1>
+            <h1 className="text-2xl font-bold">Session History</h1>
           </div>
           <div className="flex items-center gap-2 md:gap-3">
             <button
@@ -152,6 +153,8 @@ export default function HistoryPage() {
               })}
           </div>
         )}
+
+        <Footer />
       </div>
     </div>
   );

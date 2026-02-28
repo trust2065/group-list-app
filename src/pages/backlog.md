@@ -16,3 +16,4 @@ soft delete from list
 v1.4
 add dice with sound and animation
 add help page
+add copywrite

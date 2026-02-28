@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase.js';
 import { ClipboardList, LayoutDashboard, ArrowLeft, HelpCircle } from 'lucide-react';
+import Footer from '../components/Footer.jsx';
 
 const DEFAULT_INPUTS = [
   `Ann L (Host)
@@ -80,8 +81,8 @@ export default function InputPage() {
   const groupColors = ['bg-emerald-500', 'bg-blue-500', 'bg-rose-500'];
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col items-center p-4 md:p-8 font-sans">
-      <div className="max-w-5xl w-full mx-auto">
+    <div className="min-h-[100vh] flex flex-col bg-slate-50 p-4 md:p-8 font-sans">
+      <div className="max-w-5xl w-full mx-auto flex-grow flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <button
@@ -128,7 +129,7 @@ export default function InputPage() {
           <p className="text-red-500 text-center mb-6 font-medium">{errorMsg}</p>
         )}
 
-        <div className="flex justify-center">
+        <div className="flex justify-center mb-12">
           <button
             onClick={handleGenerate}
             disabled={saving}
@@ -138,6 +139,8 @@ export default function InputPage() {
             {saving ? 'Saving...' : 'Generate & Save'}
           </button>
         </div>
+
+        <Footer />
       </div>
     </div>
   );

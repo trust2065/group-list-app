@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { doc, onSnapshot, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase.js';
 import { ArrowLeft, CheckCircle2, UserPlus, Dices, HelpCircle } from 'lucide-react';
+import Footer from '../components/Footer.jsx';
 import {
   DndContext,
   DragOverlay,
@@ -351,13 +352,13 @@ export default function ResultPage() {
   };
 
   if (loading) return (
-    <div className="min-h-screen bg-slate-100 flex items-center justify-center text-slate-400 font-sans">
+    <div className="min-h-[100vh] bg-slate-100 flex items-center justify-center text-slate-400 font-sans">
       Loading...
     </div>
   );
 
   if (error) return (
-    <div className="min-h-screen bg-slate-100 flex flex-col items-center justify-center text-red-500 font-sans p-8">
+    <div className="min-h-[100vh] bg-slate-100 flex flex-col items-center justify-center text-red-500 font-sans p-8">
       <p className="text-xl font-bold mb-2">Firestore Read Error</p>
       <p className="text-sm text-slate-500 mb-4">{error}</p>
       <p className="text-sm text-slate-400">Please check your Firestore rules setup.</p>
@@ -365,7 +366,7 @@ export default function ResultPage() {
   );
 
   if (!session) return (
-    <div className="min-h-screen bg-slate-100 flex items-center justify-center text-slate-400 font-sans">
+    <div className="min-h-[100vh] bg-slate-100 flex items-center justify-center text-slate-400 font-sans">
       Record not found
     </div>
   );
@@ -408,7 +409,7 @@ export default function ResultPage() {
           {!isShort && (
             <>
               <div className="flex justify-between items-center text-white/80 font-medium mt-1 text-sm mx-2">
-                <span>{checkedCount} / {group.members.length} Confirmed</span>
+                <span>{checkedCount} / {group.members.length} Paid</span>
                 <button
                   onClick={() => handleAddPerson(groupIdx)}
                   className="hover:text-white flex items-center gap-1 bg-white/10 hover:bg-white/20 px-2 py-1 rounded transition-all active:scale-95"
@@ -459,7 +460,7 @@ export default function ResultPage() {
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
-      <div className="min-h-screen bg-slate-100 p-4 md:p-8 font-sans flex flex-col">
+      <div className="min-h-[100vh] bg-slate-100 p-4 md:p-8 font-sans flex flex-col">
         <div className="max-w-5xl w-full mx-auto flex-grow flex flex-col">
           <div className="flex justify-between items-center mb-6">
             <button
@@ -514,9 +515,7 @@ export default function ResultPage() {
             )}
           </div>
 
-          <div className="mt-8 mb-4 text-center">
-            <p className="text-xs text-slate-400">© Choco Li 2026</p>
-          </div>
+          <Footer />
         </div>
 
         <DragOverlay dropAnimation={null}>
@@ -536,8 +535,10 @@ export default function ResultPage() {
           >
             <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent pointer-events-none rounded-full" />
             {diceDisplayValues.map((num, i) => {
-              const tx = rolling ? (Math.random() - 0.5) * 150 : (i === 0 ? -40 : 40);
-              const ty = rolling ? (Math.random() - 0.5) * 150 : (i === 0 ? 10 : -10);
+              const angle = Math.random() * Math.PI * 2;
+              const radius = 90 + Math.random() * 60;
+              const tx = rolling ? Math.cos(angle) * radius : (i === 0 ? -70 : 70);
+              const ty = rolling ? Math.sin(angle) * radius : (i === 0 ? 20 : -20);
               const rot = rolling ? Math.random() * 720 : (i === 0 ? -15 : 20);
               return (
                 <div
