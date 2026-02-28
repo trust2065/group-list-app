@@ -456,6 +456,10 @@ export default function ResultPage() {
             </div>
           )}
         </div>
+
+        <div className="mt-8 mb-4 text-center">
+          <p className="text-xs text-slate-400">© Choco Li 2026</p>
+        </div>
       </div>
 
       <DragOverlay dropAnimation={null}>

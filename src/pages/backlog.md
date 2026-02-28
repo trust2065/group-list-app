@@ -3,7 +3,7 @@ add list of 3 teams
 show 3 teams list
 
 v2
-add ;paid' button on each player
+add 'paid' button on each player
 sync to firebase
 
 v3
