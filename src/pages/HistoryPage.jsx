@@ -61,21 +61,15 @@ export default function HistoryPage() {
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-3 text-slate-800">
             <ClipboardList size={32} className="text-indigo-600" />
-            <h1 className="text-2xl font-bold">Session History</h1>
+            <h1 className="text-2xl font-bold">Sessions</h1>
           </div>
           <div className="flex items-center gap-2 md:gap-3">
-            <button
-              onClick={() => setShowDeleted(!showDeleted)}
-              className="text-sm font-medium text-slate-500 hover:text-indigo-600 px-3 py-2 bg-slate-200 hover:bg-slate-300 rounded-xl transition-all"
-            >
-              {showDeleted ? 'Hide Deleted' : 'Show Deleted'}
-            </button>
             <button
               onClick={() => navigate('/new')}
               className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-5 py-3 rounded-2xl shadow hover:shadow-lg transition-all active:scale-95"
             >
               <Plus size={20} />
-              New Team
+              New Session
             </button>
             <button
               onClick={() => navigate('/help')}
@@ -98,6 +92,14 @@ export default function HistoryPage() {
           </div>
         ) : (
           <div className="space-y-3">
+            {showDeleted && (
+              <button
+                onClick={() => setShowDeleted(false)}
+                className="w-fit mb-6 flex items-center gap-1 border border-slate-300 bg-white hover:bg-slate-50 text-slate-500 font-bold px-3 h-8 rounded-lg shadow-sm hover:shadow transition-all active:scale-95 text-xs"
+              >
+                Hide Deleted
+              </button>
+            )}
             {sessions
               .filter(s => showDeleted ? s.deleted : !s.deleted)
               .map(session => {
@@ -154,6 +156,14 @@ export default function HistoryPage() {
           </div>
         )}
 
+        {!showDeleted && sessions.length > 0 && (
+          <button
+            onClick={() => setShowDeleted(true)}
+            className="w-fit mt-6 mb-2 flex items-center gap-1 border border-slate-300 bg-white hover:bg-slate-50 text-slate-500 font-bold px-3 h-8 rounded-lg shadow-sm hover:shadow transition-all active:scale-95 text-xs"
+          >
+            Show Deleted
+          </button>
+        )}
         <Footer />
       </div>
     </div>
