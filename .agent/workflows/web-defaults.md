@@ -21,3 +21,5 @@ Apply these rules automatically on every web project:
 - Apply the chosen theme consistently across all pages.
 
 ## 4. Remind and guide me to write tests first.
+
+## 5. Consider paging or show recent items only.
