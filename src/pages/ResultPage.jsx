@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { doc, onSnapshot, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase.js';
-import { ArrowLeft, CheckCircle2, UserPlus } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, UserPlus, Dices } from 'lucide-react';
 import {
   DndContext,
   DragOverlay,
@@ -27,6 +27,44 @@ const THEMES = [
   { bg: 'bg-rose-500', text: 'text-rose-700', border: 'border-rose-200', bgLight: 'bg-rose-50', ring: 'ring-rose-400' },
   { bg: 'bg-slate-500', text: 'text-slate-700', border: 'border-slate-200', bgLight: 'bg-slate-50', ring: 'ring-slate-400' },
 ];
+
+// Dice Face with Pips (Dots)
+function DiceFace({ value, rolling, theme }) {
+  const pips = {
+    1: ['center'],
+    2: ['top-right', 'bottom-left'],
+    3: ['top-right', 'center', 'bottom-left'],
+  };
+
+  const getPipPos = (pos) => {
+    switch (pos) {
+      case 'center': return 'top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2';
+      case 'top-right': return 'top-2 right-2';
+      case 'bottom-left': return 'bottom-2 left-2';
+      default: return '';
+    }
+  };
+
+  return (
+    <div
+      className={`
+        w-12 h-12 bg-white rounded-xl relative shadow-[0_4px_0_0_rgba(0,0,0,0.1)] border-2 border-slate-200
+        transition-all duration-[50ms]
+        ${rolling ? 'animate-bounce' : 'scale-110 border-indigo-500 shadow-[0_4px_0_0_rgba(79,70,229,0.3)]'}
+      `}
+      style={{
+        transform: rolling ? `rotate(${Math.random() * 360}deg)` : 'none'
+      }}
+    >
+      {pips[value]?.map((pos, i) => (
+        <div
+          key={i}
+          className={`absolute w-2.5 h-2.5 rounded-full ${rolling ? 'bg-slate-300' : 'bg-indigo-600'} ${getPipPos(pos)}`}
+        />
+      ))}
+    </div>
+  );
+}
 
 // Encode a stable unique id for each member card
 function makeId(gIdx, mIdx) {
@@ -89,7 +127,7 @@ function SortableItem({ id, member, groupIdx, memberIdx, theme, isShort, onToggl
         <span className={`
           text-lg font-bold flex-grow text-slate-700
           ${member.checked ? `${theme.text}` : ''}
-          ${isShort ? 'text-center truncate' : ''}
+          ${isShort ? 'text-center break-words' : ''}
         `}>
           {member.name}
         </span>
@@ -106,7 +144,7 @@ function DragCard({ member, theme, isShort }) {
       flex items-center gap-3 bg-white ${theme.border} ${theme.ring}
       rotate-3 scale-105
     `}>
-      <span className={`text-lg font-bold text-slate-700 ${isShort ? 'text-center truncate' : ''}`}>
+      <span className={`text-lg font-bold text-slate-700 ${isShort ? 'text-center break-words' : ''}`}>
         {member.name}
       </span>
     </div>
@@ -120,6 +158,9 @@ export default function ResultPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [activeId, setActiveId] = useState(null);
+  const [diceResults, setDiceResults] = useState(null);
+  const [diceDisplayValues, setDiceDisplayValues] = useState([1, 2]);
+  const [rolling, setRolling] = useState(false);
   const sessionRef = useRef(null);
 
   useEffect(() => {
@@ -170,6 +211,30 @@ export default function ResultPage() {
       };
     });
     await updateDoc(doc(db, 'sessions', id), { groups: newGroups });
+  };
+
+  const rollDice = () => {
+    if (rolling) return;
+    setRolling(true);
+
+    // Rapidly change numbers for a realistic "rolling" look
+    const interval = setInterval(() => {
+      setDiceDisplayValues([
+        Math.floor(Math.random() * 3) + 1,
+        Math.floor(Math.random() * 3) + 1
+      ]);
+    }, 80);
+
+    setTimeout(() => {
+      clearInterval(interval);
+      const numbers = [1, 2, 3];
+      const shuffled = [...numbers].sort(() => 0.5 - Math.random());
+      const finalResult = shuffled.slice(0, 2);
+
+      setDiceResults(finalResult);
+      setDiceDisplayValues(finalResult);
+      setRolling(false);
+    }, 3000);
   };
 
   const handleDragStart = ({ active }) => {
@@ -352,11 +417,30 @@ export default function ResultPage() {
             Back
           </button>
 
-          <div className="flex flex-col items-end gap-0.5">
-            <div className="text-slate-500 text-sm">{formatDate(session.createdAt)}</div>
-            <div className="flex items-center gap-1.5 text-emerald-600 font-bold text-sm bg-white px-3 py-1 rounded-full shadow-sm">
-              <CheckCircle2 size={15} />
-              {totalChecked} / {totalMembers} Confirmed
+          <div className="flex items-center gap-3">
+            {/* Dice Result Display */}
+            {(diceResults || rolling) && (
+              <div className="flex gap-4 items-center mr-2">
+                {diceDisplayValues.map((num, i) => (
+                  <DiceFace key={i} value={num} rolling={rolling} />
+                ))}
+              </div>
+            )}
+
+            <button
+              onClick={rollDice}
+              className={`p-2.5 rounded-full shadow-sm transition-all active:scale-90 ${rolling ? 'bg-slate-100 text-slate-300' : 'bg-white text-indigo-600 hover:shadow-md'}`}
+              title="Roll 2 Dice (1-3, no repeat)"
+            >
+              <Dices size={24} className={rolling ? 'animate-spin' : ''} />
+            </button>
+
+            <div className="flex flex-col items-end gap-0.5 ml-2">
+              <div className="text-slate-500 text-sm">{formatDate(session.createdAt)}</div>
+              <div className="flex items-center gap-1.5 text-emerald-600 font-bold text-sm bg-white px-3 py-1 rounded-full shadow-sm">
+                <CheckCircle2 size={15} />
+                {totalChecked} / {totalMembers} Confirmed
+              </div>
             </div>
           </div>
         </div>
