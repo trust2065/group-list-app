@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { doc, onSnapshot, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase.js';
-import { ArrowLeft, CheckCircle2, UserPlus, Dices } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, UserPlus, Dices, HelpCircle } from 'lucide-react';
 import {
   DndContext,
   DragOverlay,
@@ -161,6 +161,7 @@ export default function ResultPage() {
   const [diceResults, setDiceResults] = useState(null);
   const [diceDisplayValues, setDiceDisplayValues] = useState([1, 2]);
   const [rolling, setRolling] = useState(false);
+  const [bowlVisible, setBowlVisible] = useState(false);
   const sessionRef = useRef(null);
 
   useEffect(() => {
@@ -213,9 +214,57 @@ export default function ResultPage() {
     await updateDoc(doc(db, 'sessions', id), { groups: newGroups });
   };
 
+  // Sound effects using Web Audio API (Lazy initialization to respect user gesture)
+  const audioCtxRef = useRef(null);
+  const getAudioCtx = () => {
+    if (!audioCtxRef.current) {
+      audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (audioCtxRef.current.state === 'suspended') {
+      audioCtxRef.current.resume();
+    }
+    return audioCtxRef.current;
+  };
+
+  const playRollSound = () => {
+    try {
+      const ctx = getAudioCtx();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(100 + Math.random() * 50, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(20, ctx.currentTime + 0.05);
+      gain.gain.setValueAtTime(0.02, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.05);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.05);
+    } catch (e) { }
+  };
+
+  const playLandingSound = () => {
+    try {
+      const ctx = getAudioCtx();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(150, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(40, ctx.currentTime + 0.1);
+      gain.gain.setValueAtTime(0.1, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.1);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.1);
+    } catch (e) { }
+  };
+
   const rollDice = () => {
-    if (rolling) return;
+    if (rolling || bowlVisible) return;
     setRolling(true);
+    setBowlVisible(true);
+
+    // Initial sound
+    playRollSound();
 
     // Rapidly change numbers for a realistic "rolling" look
     const interval = setInterval(() => {
@@ -223,10 +272,12 @@ export default function ResultPage() {
         Math.floor(Math.random() * 3) + 1,
         Math.floor(Math.random() * 3) + 1
       ]);
+      playRollSound();
     }, 80);
 
     setTimeout(() => {
       clearInterval(interval);
+      playLandingSound();
       const numbers = [1, 2, 3];
       const shuffled = [...numbers].sort(() => 0.5 - Math.random());
       const finalResult = shuffled.slice(0, 2);
@@ -234,7 +285,8 @@ export default function ResultPage() {
       setDiceResults(finalResult);
       setDiceDisplayValues(finalResult);
       setRolling(false);
-    }, 3000);
+      setTimeout(() => setBowlVisible(false), 1500); // hold bowl to admire results
+    }, 2000); // roll for 2 seconds
   };
 
   const handleDragStart = ({ active }) => {
@@ -351,7 +403,7 @@ export default function ResultPage() {
       >
         <div className={`${theme.bg} py-4 px-4 text-center flex flex-col justify-center ${isShort ? 'bg-opacity-80 md:w-56 shrink-0' : ''}`}>
           <h2 className={`font-extrabold text-white tracking-wider ${isShort ? 'text-xl' : 'text-2xl lg:text-3xl'}`}>
-            {group.name}
+            {groupIdx === 3 ? 'Temp' : group.name}
           </h2>
           {!isShort && (
             <>
@@ -437,11 +489,15 @@ export default function ResultPage() {
 
             <div className="flex flex-col items-end gap-0.5 ml-2">
               <div className="text-slate-500 text-sm">{formatDate(session.createdAt)}</div>
-              <div className="flex items-center gap-1.5 text-emerald-600 font-bold text-sm bg-white px-3 py-1 rounded-full shadow-sm">
-                <CheckCircle2 size={15} />
-                {totalChecked} / {totalMembers} Confirmed
-              </div>
             </div>
+
+            <button
+              onClick={() => navigate('/help')}
+              className="p-2.5 text-slate-400 hover:text-indigo-600 bg-white hover:bg-indigo-50 rounded-full border border-slate-200 transition-all shadow-sm"
+              title="How to use"
+            >
+              <HelpCircle size={22} />
+            </button>
           </div>
         </div>
 
@@ -467,6 +523,41 @@ export default function ResultPage() {
           <DragCard member={activeMember} theme={activeTheme} isShort={activeIsShort} />
         ) : null}
       </DragOverlay>
+
+      {/* Dice Bowl Overlay */}
+      <div
+        className={`fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm transition-all duration-300 pointer-events-none ${bowlVisible ? 'opacity-100' : 'opacity-0'}`}
+        style={{ visibility: bowlVisible || rolling ? 'visible' : 'hidden' }}
+      >
+        <div
+          className="w-72 h-72 sm:w-96 sm:h-96 rounded-full shadow-[inset_0_-20px_50px_rgba(0,0,0,0.4),0_20px_50px_rgba(0,0,0,0.5)] border-[12px] border-[#8b5a2b] bg-[#2d6a4f] relative overflow-hidden flex items-center justify-center transition-transform duration-500"
+          style={{ transform: bowlVisible ? 'scale(1)' : 'scale(0.8)' }}
+        >
+          {/* Inner shadow/gradient for depth */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent pointer-events-none rounded-full" />
+
+          {diceDisplayValues.map((num, i) => {
+            // Randomly fly around while rolling!
+            const tx = rolling ? (Math.random() - 0.5) * 150 : (i === 0 ? -40 : 40);
+            const ty = rolling ? (Math.random() - 0.5) * 150 : (i === 0 ? 10 : -10);
+            const rot = rolling ? Math.random() * 720 : (i === 0 ? -15 : 20);
+            return (
+              <div
+                key={i}
+                className="absolute ease-linear pointer-events-auto shadow-2xl"
+                style={{
+                  transform: `translate(${tx}px, ${ty}px) rotate(${rot}deg) scale(1.6)`,
+                  transitionDuration: rolling ? '80ms' : '500ms',
+                  transitionTimingFunction: rolling ? 'linear' : 'cubic-bezier(0.34, 1.56, 0.64, 1)',
+                  transitionProperty: 'transform'
+                }}
+              >
+                <DiceFace value={num} rolling={false} />
+              </div>
+            );
+          })}
+        </div>
+      </div>
     </DndContext>
   );
 }

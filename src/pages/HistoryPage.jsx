@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { collection, getDocs, orderBy, query, updateDoc, doc } from 'firebase/firestore';
 import { db } from '../firebase.js';
-import { ClipboardList, Plus, Trash2, ChevronRight, Users } from 'lucide-react';
+import { ClipboardList, Plus, Trash2, ChevronRight, Users, HelpCircle } from 'lucide-react';
 
 export default function HistoryPage() {
   const [sessions, setSessions] = useState([]);
@@ -62,7 +62,7 @@ export default function HistoryPage() {
             <ClipboardList size={32} className="text-indigo-600" />
             <h1 className="text-2xl font-bold">Team History</h1>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 md:gap-3">
             <button
               onClick={() => setShowDeleted(!showDeleted)}
               className="text-sm font-medium text-slate-500 hover:text-indigo-600 px-3 py-2 bg-slate-200 hover:bg-slate-300 rounded-xl transition-all"
@@ -75,6 +75,13 @@ export default function HistoryPage() {
             >
               <Plus size={20} />
               New Team
+            </button>
+            <button
+              onClick={() => navigate('/help')}
+              className="p-3 text-slate-400 hover:text-indigo-600 bg-white hover:bg-indigo-50 rounded-xl border border-slate-200 transition-all shadow-sm"
+              title="How to use"
+            >
+              <HelpCircle size={20} />
             </button>
           </div>
         </div>
@@ -93,7 +100,7 @@ export default function HistoryPage() {
             {sessions
               .filter(s => showDeleted ? s.deleted : !s.deleted)
               .map(session => {
-                const { checked, total } = getTotalChecked(session);
+                const { total } = getTotalChecked(session);
                 return (
                   <div
                     key={session.id}
@@ -116,14 +123,9 @@ export default function HistoryPage() {
                         {(session.groups || []).map((g, i) => (
                           <span key={i} className="flex items-center gap-1">
                             <Users size={11} />
-                            Team {i + 1} ({g.members?.length || 0})
+                            {i === 3 ? 'Temp' : `Team ${i + 1}`} ({g.members?.length || 0})
                           </span>
                         ))}
-                        {total > 0 && (
-                          <span className="ml-1 text-emerald-600 font-medium">
-                            ✓ {checked}/{total}
-                          </span>
-                        )}
                       </div>
                     </div>
 

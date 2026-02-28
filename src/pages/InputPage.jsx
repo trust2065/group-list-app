@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase.js';
-import { ClipboardList, LayoutDashboard, ArrowLeft } from 'lucide-react';
+import { ClipboardList, LayoutDashboard, ArrowLeft, HelpCircle } from 'lucide-react';
 
 const DEFAULT_INPUTS = [
   `Ann L (Host)
@@ -95,7 +95,13 @@ export default function InputPage() {
             <ClipboardList size={28} />
             <h1 className="text-2xl font-bold text-slate-800">New Team List</h1>
           </div>
-          <div className="w-28" />
+          <button
+            onClick={() => navigate('/help')}
+            className="p-2.5 text-slate-400 hover:text-indigo-600 bg-white hover:bg-indigo-50 rounded-xl border border-slate-200 transition-all shadow-sm"
+            title="How to use"
+          >
+            <HelpCircle size={20} />
+          </button>
         </div>
 
         {/* Textareas */}

@@ -19,3 +19,5 @@ Apply these rules automatically on every web project:
 - Before building, offer at least 3 style/colour theme options and let the user choose.
 - Examples: dark mode, light mode, pastel, vibrant, glassmorphism, etc.
 - Apply the chosen theme consistently across all pages.
+
+## 4. Remind and guide me to write tests first.
