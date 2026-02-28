@@ -6,7 +6,7 @@ import { ClipboardList, LayoutDashboard, ArrowLeft } from 'lucide-react';
 
 const DEFAULT_INPUTS = [
   `Ann L (Host)
-林維真 or Lin Wei-chen
+Lin Wei-chen
 Roy Liao
 Hank
 Mike Tsai`,
@@ -55,12 +55,12 @@ export default function InputPage() {
 
     try {
       const groups = parsedGroups.map((members, i) => ({
-        name: `Group ${i + 1}`,
+        name: `Team ${i + 1}`,
         members: members.map(name => ({ name, checked: false })),
       }));
 
       groups.push({
-        name: 'Bench / Temp Area',
+        name: 'Temp Area',
         members: []
       });
 
@@ -93,30 +93,26 @@ export default function InputPage() {
           </button>
           <div className="flex items-center gap-2 text-indigo-600">
             <ClipboardList size={28} />
-            <h1 className="text-2xl font-bold text-slate-800">New Group List</h1>
+            <h1 className="text-2xl font-bold text-slate-800">New Team List</h1>
           </div>
           <div className="w-28" />
         </div>
-
-        <p className="text-slate-500 text-center mb-8">
-          Copy member list from Excel and paste it into the group boxes
-        </p>
 
         {/* Textareas */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           {[0, 1, 2].map((i) => (
             <div key={i} className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
               <div className={`py-3 px-4 text-center font-bold text-white ${groupColors[i]}`}>
-                Group {i + 1} List
+                Team {i + 1}
               </div>
               <textarea
                 className="w-full h-72 p-4 text-base focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500 resize-none"
-                placeholder={`Paste Group ${i + 1} list here...`}
+                placeholder={`Paste Team ${i + 1} list here...`}
                 value={inputs[i]}
                 onChange={e => handleInputChange(i, e.target.value)}
               />
               <div className="bg-slate-50 px-4 py-2 text-xs text-slate-400 text-right">
-                Detected: {countLines(inputs[i])} pax
+                {countLines(inputs[i])} players
               </div>
             </div>
           ))}

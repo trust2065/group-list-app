@@ -1,8 +1,25 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { doc, onSnapshot, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase.js';
 import { ArrowLeft, CheckCircle2, UserPlus } from 'lucide-react';
+import {
+  DndContext,
+  DragOverlay,
+  PointerSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+  useDroppable,
+  closestCenter,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+  useSortable,
+  arrayMove,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 const THEMES = [
   { bg: 'bg-emerald-500', text: 'text-emerald-700', border: 'border-emerald-200', bgLight: 'bg-emerald-50', ring: 'ring-emerald-400' },
@@ -11,14 +28,100 @@ const THEMES = [
   { bg: 'bg-slate-500', text: 'text-slate-700', border: 'border-slate-200', bgLight: 'bg-slate-50', ring: 'ring-slate-400' },
 ];
 
+// Encode a stable unique id for each member card
+function makeId(gIdx, mIdx) {
+  return `${gIdx}:${mIdx}`;
+}
+function parseId(id) {
+  const [g, m] = id.split(':');
+  return { gIdx: Number(g), mIdx: Number(m) };
+}
+
+// Droppable zone for an empty group (no sortable items)
+function EmptyDropZone({ groupIdx }) {
+  const { setNodeRef, isOver } = useDroppable({ id: `group-${groupIdx}` });
+  return (
+    <li
+      ref={setNodeRef}
+      className={`text-center italic py-6 rounded-2xl transition-colors ${isOver ? 'bg-slate-100 text-slate-400' : 'text-slate-300'
+        } font-medium`}
+    >
+    </li>
+  );
+}
+
+// Individual sortable member card
+function SortableItem({ id, member, groupIdx, memberIdx, theme, isShort, onToggle }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.35 : 1,
+    touchAction: 'none',
+  };
+
+  return (
+    <li ref={setNodeRef} style={style} {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing">
+      <button
+        onClick={() => onToggle(groupIdx, memberIdx)}
+        className={`
+          w-full text-left py-3 px-4 rounded-2xl border transition-all duration-150 active:scale-98
+          flex items-center gap-3 shadow-sm select-none
+          ${member.checked
+            ? `${theme.bgLight} ${theme.border} ring-1 ${theme.ring}`
+            : 'bg-white border-slate-200 hover:bg-slate-50'
+          }
+        `}
+      >
+        {!isShort && (
+          <div className={`
+            w-5 h-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all
+            ${member.checked ? `${theme.bg} border-transparent` : 'border-slate-300'}
+          `}>
+            {member.checked && (
+              <svg className="w-3 h-3 text-white" viewBox="0 0 12 10" fill="none">
+                <path d="M1 5l3.5 3.5L11 1" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            )}
+          </div>
+        )}
+        <span className={`
+          text-lg font-bold flex-grow text-slate-700
+          ${member.checked ? `${theme.text}` : ''}
+          ${isShort ? 'text-center truncate' : ''}
+        `}>
+          {member.name}
+        </span>
+      </button>
+    </li>
+  );
+}
+
+// Overlay card shown while dragging
+function DragCard({ member, theme, isShort }) {
+  return (
+    <div className={`
+      py-3 px-4 rounded-2xl border shadow-2xl ring-2
+      flex items-center gap-3 bg-white ${theme.border} ${theme.ring}
+      rotate-3 scale-105
+    `}>
+      <span className={`text-lg font-bold text-slate-700 ${isShort ? 'text-center truncate' : ''}`}>
+        {member.name}
+      </span>
+    </div>
+  );
+}
+
 export default function ResultPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [activeId, setActiveId] = useState(null);
+  const sessionRef = useRef(null);
 
-  // Real-time Firestore listener
   useEffect(() => {
     const unsub = onSnapshot(
       doc(db, 'sessions', id),
@@ -26,11 +129,13 @@ export default function ResultPage() {
         if (snap.exists()) {
           const data = snap.data();
           if (data.groups && data.groups.length === 3) {
-            const newGroups = [...data.groups, { name: 'Bench / Temp Area', members: [] }];
+            const newGroups = [...data.groups, { name: '', members: [] }];
             updateDoc(doc(db, 'sessions', snap.id), { groups: newGroups });
             return;
           }
-          setSession({ id: snap.id, ...data });
+          const s = { id: snap.id, ...data };
+          setSession(s);
+          sessionRef.current = s;
         }
         setLoading(false);
       },
@@ -43,9 +148,19 @@ export default function ResultPage() {
     return unsub;
   }, [id]);
 
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 8 },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: { delay: 200, tolerance: 8 },
+    })
+  );
+
   const toggleCheck = async (groupIdx, memberIdx) => {
-    if (!session) return;
-    const newGroups = session.groups.map((g, gi) => {
+    const cur = sessionRef.current;
+    if (!cur) return;
+    const newGroups = cur.groups.map((g, gi) => {
       if (gi !== groupIdx) return g;
       return {
         ...g,
@@ -57,51 +172,54 @@ export default function ResultPage() {
     await updateDoc(doc(db, 'sessions', id), { groups: newGroups });
   };
 
-  const handleDragStart = (e, gIdx, mIdx) => {
-    e.dataTransfer.setData('text/plain', JSON.stringify({ gIdx, mIdx }));
+  const handleDragStart = ({ active }) => {
+    setActiveId(active.id);
   };
 
-  const handleDragOver = (e) => {
-    e.preventDefault();
-  };
+  const handleDragEnd = async ({ active, over }) => {
+    setActiveId(null);
+    if (!over || active.id === over.id) return;
 
-  const handleDrop = async (e, targetGIdx, targetMIdx = null) => {
-    e.preventDefault();
-    const data = e.dataTransfer.getData('text/plain');
-    if (!data) return;
+    const cur = sessionRef.current;
+    if (!cur) return;
 
-    // We wrapped in try/catch to gracefully handle non-json drag drops
-    try {
-      const { gIdx: sourceGIdx, mIdx: sourceMIdx } = JSON.parse(data);
+    const { gIdx: srcG, mIdx: srcM } = parseId(active.id);
+    let newGroups;
 
-      if (!session) return;
-      const newGroups = JSON.parse(JSON.stringify(session.groups));
+    // Dropped onto a group zone (empty group)
+    if (String(over.id).startsWith('group-')) {
+      const tgtG = Number(over.id.replace('group-', ''));
+      if (srcG === tgtG) return;
+      newGroups = JSON.parse(JSON.stringify(cur.groups));
+      const [moved] = newGroups[srcG].members.splice(srcM, 1);
+      newGroups[tgtG].members.push(moved);
+    } else {
+      // Dropped onto another member card
+      const { gIdx: tgtG, mIdx: tgtM } = parseId(over.id);
+      newGroups = JSON.parse(JSON.stringify(cur.groups));
 
-      if (sourceGIdx === targetGIdx && targetMIdx !== null) {
-        if (sourceMIdx === targetMIdx) return;
-        const [moved] = newGroups[sourceGIdx].members.splice(sourceMIdx, 1);
-        newGroups[sourceGIdx].members.splice(targetMIdx, 0, moved);
-        await updateDoc(doc(db, 'sessions', id), { groups: newGroups });
-        return;
-      }
-
-      const [movedMem] = newGroups[sourceGIdx].members.splice(sourceMIdx, 1);
-      if (targetMIdx !== null) {
-        newGroups[targetGIdx].members.splice(targetMIdx, 0, movedMem);
+      if (srcG === tgtG) {
+        newGroups[srcG].members = arrayMove(newGroups[srcG].members, srcM, tgtM);
       } else {
-        newGroups[targetGIdx].members.push(movedMem);
+        const [moved] = newGroups[srcG].members.splice(srcM, 1);
+        newGroups[tgtG].members.splice(tgtM, 0, moved);
       }
-      await updateDoc(doc(db, 'sessions', id), { groups: newGroups });
-    } catch (err) {
-      console.log('Drop data format ignored');
     }
+
+    // Optimistic update — no bounce-back
+    const optimistic = { ...cur, groups: newGroups };
+    setSession(optimistic);
+    sessionRef.current = optimistic;
+
+    await updateDoc(doc(db, 'sessions', id), { groups: newGroups });
   };
 
   const handleAddPerson = async (gIdx) => {
     const name = prompt('Enter new member name:');
     if (!name || name.trim() === '') return;
-
-    const newGroups = JSON.parse(JSON.stringify(session.groups));
+    const cur = sessionRef.current;
+    if (!cur) return;
+    const newGroups = JSON.parse(JSON.stringify(cur.groups));
     newGroups[gIdx].members.push({ name: name.trim(), checked: false });
     await updateDoc(doc(db, 'sessions', id), { groups: newGroups });
   };
@@ -111,7 +229,7 @@ export default function ResultPage() {
     const d = ts.toDate ? ts.toDate() : new Date(ts);
     return d.toLocaleDateString('en-US', {
       year: 'numeric', month: 'short', day: 'numeric',
-      hour: '2-digit', minute: '2-digit'
+      hour: '2-digit', minute: '2-digit',
     });
   };
 
@@ -141,18 +259,32 @@ export default function ResultPage() {
   const mainGroups = session.groups.slice(0, 3);
   const benchGroup = session.groups[3];
 
+  // Find what's being dragged for overlay
+  let activeMember = null;
+  let activeTheme = THEMES[3];
+  let activeIsShort = false;
+  if (activeId) {
+    const { gIdx, mIdx } = parseId(activeId);
+    activeMember = session.groups[gIdx]?.members[mIdx];
+    activeTheme = THEMES[gIdx] || THEMES[3];
+    activeIsShort = gIdx === 3;
+  }
+
   const renderGroupCard = (group, groupIdx, isShort = false) => {
     const theme = THEMES[groupIdx] || THEMES[3];
     const checkedCount = group.members.filter(m => m.checked).length;
+    const itemIds = group.members.map((_, mIdx) => makeId(groupIdx, mIdx));
 
     return (
       <div
         key={groupIdx}
-        onDragOver={handleDragOver}
-        onDrop={(e) => handleDrop(e, groupIdx)}
-        className={`bg-white rounded-3xl shadow-lg border-2 ${isShort ? 'border-dashed border-slate-300 bg-slate-50/50' : 'border-transparent'} overflow-hidden flex flex-col min-h-[150px]`}
+        className={`bg-white rounded-3xl shadow-lg border-2 overflow-hidden flex
+          ${isShort
+            ? 'border-dashed border-slate-300 bg-slate-50/50 flex-col md:flex-row'
+            : 'border-transparent flex-col h-full'
+          }`}
       >
-        <div className={`${theme.bg} py-4 px-4 text-center ${isShort ? 'py-3 bg-opacity-80' : ''}`}>
+        <div className={`${theme.bg} py-4 px-4 text-center flex flex-col justify-center ${isShort ? 'bg-opacity-80 md:w-56 shrink-0' : ''}`}>
           <h2 className={`font-extrabold text-white tracking-wider ${isShort ? 'text-xl' : 'text-2xl lg:text-3xl'}`}>
             {group.name}
           </h2>
@@ -175,103 +307,78 @@ export default function ResultPage() {
               </div>
             </>
           )}
-          {isShort && (
-            <div className="text-white/80 font-medium mt-1 text-sm">
-              <span>{group.members.length} pax</span>
-            </div>
-          )}
         </div>
 
         <div className="flex-grow p-4 overflow-y-auto">
-          <ul className={`space-y-2.5 ${isShort ? 'grid grid-cols-2 sm:grid-cols-4 gap-3 space-y-0' : ''}`}>
-            {group.members.length > 0 ? (
-              group.members.map((member, memberIdx) => (
-                <li
-                  key={memberIdx}
-                  draggable
-                  onDragStart={(e) => handleDragStart(e, groupIdx, memberIdx)}
-                  onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
-                  onDrop={(e) => { e.stopPropagation(); handleDrop(e, groupIdx, memberIdx); }}
-                  className="cursor-move"
-                >
-                  <button
-                    onClick={() => toggleCheck(groupIdx, memberIdx)}
-                    className={`
-                      w-full text-left py-3 px-4 rounded-2xl border transition-all duration-150 active:scale-98
-                      flex items-center gap-3 shadow-sm
-                      ${member.checked
-                        ? `${theme.bgLight} ${theme.border} ring-1 ${theme.ring}`
-                        : 'bg-white border-slate-200 hover:bg-slate-50'
-                      }
-                    `}
-                  >
-                    {!isShort && (
-                      <div className={`
-                        w-5 h-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all
-                        ${member.checked ? `${theme.bg} border-transparent` : 'border-slate-300'}
-                      `}>
-                        {member.checked && (
-                          <svg className="w-3 h-3 text-white" viewBox="0 0 12 10" fill="none">
-                            <path d="M1 5l3.5 3.5L11 1" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                          </svg>
-                        )}
-                      </div>
-                    )}
-                    <span className={`
-                      text-lg font-bold flex-grow text-slate-700
-                      ${member.checked ? `${theme.text}` : ''}
-                      ${isShort ? 'text-center truncate' : ''}
-                    `}>
-                      {member.name}
-                    </span>
-                    {(!isShort && member.checked) && (
-                      <CheckCircle2 size={18} className={`flex-shrink-0 ${theme.text} opacity-70`} />
-                    )}
-                  </button>
-                </li>
-              ))
-            ) : (
-              <li className={`text-slate-300 font-medium text-center italic ${isShort ? 'col-span-full py-2' : 'mt-10'}`}>
-                Drop members here
-              </li>
-            )}
-          </ul>
+          <SortableContext items={itemIds} strategy={verticalListSortingStrategy}>
+            <ul className={`space-y-2.5 ${isShort ? 'grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3 space-y-0 w-full' : ''}`}>
+              {group.members.length > 0 ? (
+                group.members.map((member, memberIdx) => (
+                  <SortableItem
+                    key={makeId(groupIdx, memberIdx)}
+                    id={makeId(groupIdx, memberIdx)}
+                    member={member}
+                    groupIdx={groupIdx}
+                    memberIdx={memberIdx}
+                    theme={theme}
+                    isShort={isShort}
+                    onToggle={toggleCheck}
+                  />
+                ))
+              ) : (
+                <EmptyDropZone groupIdx={groupIdx} />
+              )}
+            </ul>
+          </SortableContext>
         </div>
       </div>
     );
   };
 
   return (
-    <div className="min-h-screen bg-slate-100 p-4 md:p-8 font-sans flex flex-col">
-      <div className="flex justify-between items-center mb-6">
-        <button
-          onClick={() => navigate('/')}
-          className="flex items-center gap-2 text-slate-600 hover:text-indigo-600 font-medium text-lg bg-white px-5 py-2.5 rounded-full shadow-sm hover:shadow transition-all"
-        >
-          <ArrowLeft size={20} />
-          Back
-        </button>
+    <DndContext
+      sensors={sensors}
+      collisionDetection={closestCenter}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+    >
+      <div className="min-h-screen bg-slate-100 p-4 md:p-8 font-sans flex flex-col">
+        <div className="flex justify-between items-center mb-6">
+          <button
+            onClick={() => navigate('/')}
+            className="flex items-center gap-2 text-slate-600 hover:text-indigo-600 font-medium text-lg bg-white px-5 py-2.5 rounded-full shadow-sm hover:shadow transition-all"
+          >
+            <ArrowLeft size={20} />
+            Back
+          </button>
 
-        <div className="flex flex-col items-end gap-0.5">
-          <div className="text-slate-500 text-sm">{formatDate(session.createdAt)}</div>
-          <div className="flex items-center gap-1.5 text-emerald-600 font-bold text-sm bg-white px-3 py-1 rounded-full shadow-sm">
-            <CheckCircle2 size={15} />
-            {totalChecked} / {totalMembers} Confirmed
+          <div className="flex flex-col items-end gap-0.5">
+            <div className="text-slate-500 text-sm">{formatDate(session.createdAt)}</div>
+            <div className="flex items-center gap-1.5 text-emerald-600 font-bold text-sm bg-white px-3 py-1 rounded-full shadow-sm">
+              <CheckCircle2 size={15} />
+              {totalChecked} / {totalMembers} Confirmed
+            </div>
           </div>
+        </div>
+
+        <div className="flex-grow flex flex-col gap-5 md:gap-7">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 md:gap-7 items-stretch">
+            {mainGroups.map((g, i) => renderGroupCard(g, i, false))}
+          </div>
+
+          {benchGroup && (
+            <div className="w-full mt-4">
+              {renderGroupCard(benchGroup, 3, true)}
+            </div>
+          )}
         </div>
       </div>
 
-      <div className="flex-grow flex flex-col gap-5 md:gap-7">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 md:gap-7 items-start">
-          {mainGroups.map((g, i) => renderGroupCard(g, i, false))}
-        </div>
-
-        {benchGroup && (
-          <div className="w-full mt-4">
-            {renderGroupCard(benchGroup, 3, true)}
-          </div>
-        )}
-      </div>
-    </div>
+      <DragOverlay dropAnimation={null}>
+        {activeMember ? (
+          <DragCard member={activeMember} theme={activeTheme} isShort={activeIsShort} />
+        ) : null}
+      </DragOverlay>
+    </DndContext>
   );
 }

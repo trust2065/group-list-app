@@ -5,7 +5,7 @@ import App from './App.jsx';
 import './index.css';
 
 import { polyfill } from "mobile-drag-drop";
-import { scrollBehaviourDragImageTranslateOverride } from "mobile-drag-drop/scroll-behaviour-css";
+import { scrollBehaviourDragImageTranslateOverride } from "mobile-drag-drop/scroll-behaviour";
 import "mobile-drag-drop/default.css";
 
 polyfill({
